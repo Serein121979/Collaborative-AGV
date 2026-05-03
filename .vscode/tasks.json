@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Upload MCU Car A (stcgal)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "tools/stc_upload.py",
+        "--env",
+        "mcu_car_a",
+        "--port",
+        "${input:stcPortA}"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Upload MCU Car B (stcgal)",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "tools/stc_upload.py",
+        "--env",
+        "mcu_car_b",
+        "--port",
+        "${input:stcPortB}"
+      ],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "stcPortA",
+      "type": "promptString",
+      "description": "Car A 51 serial port, e.g. /dev/cu.usbserial-1410"
+    },
+    {
+      "id": "stcPortB",
+      "type": "promptString",
+      "description": "Car B 51 serial port, e.g. /dev/cu.usbserial-1420"
+    }
+  ]
+}

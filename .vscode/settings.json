@@ -1,0 +1,9 @@
+{
+  "C_Cpp.default.configurationProvider": "platformio.platformio-ide",
+  "files.associations": {
+    "*.ino": "cpp"
+  },
+  "python.analysis.exclude": [
+    ".pio"
+  ]
+}

@@ -1,0 +1,21 @@
+#ifndef BOARD_CONFIG_H
+#define BOARD_CONFIG_H
+
+#include "../mcu_common/mcs51_sdcc.h"
+
+#define MOTOR_LEFT_IN1 P1_2
+#define MOTOR_LEFT_IN2 P1_3
+#define MOTOR_RIGHT_IN1 P1_6
+#define MOTOR_RIGHT_IN2 P1_7
+
+#define MOTOR_LEFT_EN P1_4
+#define MOTOR_RIGHT_EN P1_5
+
+#define UART_TIMER1_RELOAD 0xFD
+#define TIMER0_RELOAD_HIGH 0xFC
+#define TIMER0_RELOAD_LOW 0x66
+
+#define COMMAND_TIMEOUT_MS 1000
+#define TURN_INNER_SPEED_PERCENT 40
+
+#endif
