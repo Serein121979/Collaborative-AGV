@@ -22,8 +22,8 @@ typedef enum {
 
 static volatile u8 g_rx_index = 0;
 static volatile u8 g_line_ready = 0;
-static volatile char g_rx_working[RX_BUFFER_SIZE];
-static volatile char g_rx_latest[RX_BUFFER_SIZE];
+static volatile __idata char g_rx_working[RX_BUFFER_SIZE];
+static volatile __idata char g_rx_latest[RX_BUFFER_SIZE];
 
 static volatile u16 g_command_age_ms = COMMAND_TIMEOUT_MS;
 static volatile u8 g_pwm_phase = 0;
@@ -183,23 +183,39 @@ static u8 match_action(const char* action, Motion* motion) {
   return 0;
 }
 
+static char* find_command_start(char* line) {
+  while (*line != '\0') {
+    if (strncmp(line, "#RUN,", 5) == 0 || strcmp(line, "#STOP") == 0) {
+      return line;
+    }
+    ++line;
+  }
+
+  return 0;
+}
+
 static void handle_line(char* line) {
   Motion motion = MOTION_STOP;
   u8 speed = 0;
   char* action = 0;
   char* speed_text = 0;
+  char* command = find_command_start(line);
 
-  if (strcmp(line, "#STOP") == 0) {
+  if (command == 0) {
+    return;
+  }
+
+  if (strcmp(command, "#STOP") == 0) {
     motor_stop();
     g_command_age_ms = 0;
     return;
   }
 
-  if (strncmp(line, "#RUN,", 5) != 0) {
+  if (strncmp(command, "#RUN,", 5) != 0) {
     return;
   }
 
-  action = line + 5;
+  action = command + 5;
   speed_text = strchr(action, ',');
   if (speed_text == 0) {
     return;
@@ -264,7 +280,7 @@ void CarFirmware_Init(void) {
 }
 
 void CarFirmware_Task(void) {
-  char line[RX_BUFFER_SIZE];
+  static __idata char line[RX_BUFFER_SIZE];
 
   if (fetch_latest_line(line)) {
     handle_line(line);
@@ -301,11 +317,7 @@ void uart_isr(void) __interrupt(4) {
   RI = 0;
   value = SBUF;
 
-  if (value == '\r') {
-    return;
-  }
-
-  if (value == '\n') {
+  if (value == '\r' || value == '\n') {
     if (g_rx_index > 0) {
       for (index = 0; index < g_rx_index; ++index) {
         g_rx_latest[index] = g_rx_working[index];

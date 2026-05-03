@@ -9,6 +9,7 @@ constexpr uint16_t kTcpPort = 8080;
 constexpr long kUartBaud = 9600;
 constexpr int kDefaultSpeed = 180;
 constexpr unsigned long kCar2AckTimeoutMs = 800;
+constexpr unsigned long kLocalRepeatIntervalMs = 120;
 constexpr uint8_t kMaxClients = 4;
 
 const IPAddress kApIp(192, 168, 4, 1);
@@ -42,6 +43,9 @@ struct ClientSlot {
 WiFiServer server(kTcpPort);
 ClientSlot clientSlots[kMaxClients];
 PendingAck pendingAck;
+MotionCommand lastLocalCommand;
+bool localMotionActive = false;
+unsigned long lastLocalMotionSentAt = 0;
 
 int findSlotByRole(ClientRole role) {
   int i;
@@ -70,6 +74,8 @@ void sendToRole(ClientRole role, const String& line) {
 }
 
 void sendLocalMotion(const MotionCommand& command) {
+  lastLocalMotionSentAt = millis();
+
   if (command.action == "STOP") {
     Serial.print("#STOP\n");
     return;
@@ -91,6 +97,7 @@ void stopAllCars() {
 
   sendLocalMotion(stopCommand);
   sendToRole(ROLE_CAR2, "CMD,0,STOP,0");
+  localMotionActive = false;
   pendingAck.active = false;
 }
 
@@ -210,9 +217,21 @@ void handlePhoneCommand(const String& line) {
   }
 
   sendLocalMotion(command);
+  lastLocalCommand = command;
+  localMotionActive = command.action != "STOP";
   sendToRole(ROLE_PHONE, "ACK," + command.seq);
   if (!mirrorToCar2(command)) {
     sendToRole(ROLE_PHONE, "WARN,CAR2_OFFLINE");
+  }
+}
+
+void repeatLocalMotion() {
+  if (!localMotionActive) {
+    return;
+  }
+
+  if (millis() - lastLocalMotionSentAt >= kLocalRepeatIntervalMs) {
+    sendLocalMotion(lastLocalCommand);
   }
 }
 
@@ -368,4 +387,5 @@ void loop() {
   acceptNewClients();
   pollClientData();
   checkPendingAck();
+  repeatLocalMotion();
 }
