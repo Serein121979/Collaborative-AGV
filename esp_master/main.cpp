@@ -6,6 +6,7 @@ namespace {
 constexpr char kApSsid[] = "AGV_CTRL";
 constexpr char kApPassword[] = "12345678";
 constexpr uint16_t kTcpPort = 8080;
+constexpr uint8_t kApChannel = 1;
 constexpr long kUartBaud = 9600;
 constexpr int kDefaultSpeed = 180;
 constexpr unsigned long kCar2AckTimeoutMs = 800;
@@ -77,15 +78,25 @@ void sendLocalMotion(const MotionCommand& command) {
   lastLocalMotionSentAt = millis();
 
   if (command.action == "STOP") {
-    Serial.print("#STOP\n");
+    Serial.print("S\n");
     return;
   }
 
-  Serial.print("#RUN,");
-  Serial.print(command.action);
-  Serial.print(",");
-  Serial.print(command.speed);
-  Serial.print("\n");
+  if (command.action == "FWD") {
+    Serial.print("F\n");
+  } else if (command.action == "BACK") {
+    Serial.print("B\n");
+  } else if (command.action == "LEFT") {
+    Serial.print("L\n");
+  } else if (command.action == "RIGHT") {
+    Serial.print("R\n");
+  } else if (command.action == "SPINL") {
+    Serial.print("L\n");
+  } else if (command.action == "SPINR") {
+    Serial.print("R\n");
+  } else {
+    Serial.print("S\n");
+  }
 }
 
 void stopAllCars() {
@@ -218,7 +229,7 @@ void handlePhoneCommand(const String& line) {
 
   sendLocalMotion(command);
   lastLocalCommand = command;
-  localMotionActive = command.action != "STOP";
+  localMotionActive = command.action == "FWD" || command.action == "BACK";
   sendToRole(ROLE_PHONE, "ACK," + command.seq);
   if (!mirrorToCar2(command)) {
     sendToRole(ROLE_PHONE, "WARN,CAR2_OFFLINE");
@@ -375,7 +386,7 @@ void setup() {
   WiFi.persistent(false);
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(kApIp, kApGateway, kApSubnet);
-  WiFi.softAP(kApSsid, kApPassword);
+  WiFi.softAP(kApSsid, kApPassword, kApChannel, false, 4);
 
   server.begin();
   server.setNoDelay(true);

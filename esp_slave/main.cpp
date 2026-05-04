@@ -8,8 +8,10 @@ constexpr char kPassword[] = "12345678";
 constexpr long kUartBaud = 9600;
 constexpr uint16_t kTcpPort = 8080;
 constexpr int kDefaultSpeed = 180;
-constexpr unsigned long kWifiRetryMs = 3000;
+constexpr unsigned long kWifiRetryMs = 8000;
 constexpr unsigned long kTcpRetryMs = 1500;
+constexpr unsigned long kWifiBlinkMs = 150;
+constexpr unsigned long kTcpBlinkMs = 650;
 
 const IPAddress kMasterIp(192, 168, 4, 1);
 
@@ -25,6 +27,29 @@ bool registeredWithMaster = false;
 bool wasLinkHealthy = false;
 unsigned long lastWifiAttemptMs = 0;
 unsigned long lastTcpAttemptMs = 0;
+unsigned long lastStatusBlinkMs = 0;
+bool statusLedOn = false;
+
+void setStatusLed(bool on) {
+  statusLedOn = on;
+  digitalWrite(LED_BUILTIN, on ? LOW : HIGH);
+}
+
+void updateStatusLed() {
+  const unsigned long now = millis();
+  const unsigned long blinkMs =
+      (WiFi.status() == WL_CONNECTED) ? kTcpBlinkMs : kWifiBlinkMs;
+
+  if (registeredWithMaster) {
+    setStatusLed(true);
+    return;
+  }
+
+  if (now - lastStatusBlinkMs >= blinkMs) {
+    lastStatusBlinkMs = now;
+    setStatusLed(!statusLedOn);
+  }
+}
 
 bool isValidAction(const String& action) {
   return action == "STOP" || action == "FWD" || action == "BACK" ||
@@ -104,15 +129,25 @@ bool parseMotionCommand(const String& line, MotionCommand& command) {
 
 void sendLocalMotion(const MotionCommand& command) {
   if (command.action == "STOP") {
-    Serial.print("#STOP\n");
+    Serial.print("S\n");
     return;
   }
 
-  Serial.print("#RUN,");
-  Serial.print(command.action);
-  Serial.print(",");
-  Serial.print(command.speed);
-  Serial.print("\n");
+  if (command.action == "FWD") {
+    Serial.print("F\n");
+  } else if (command.action == "BACK") {
+    Serial.print("B\n");
+  } else if (command.action == "LEFT") {
+    Serial.print("L\n");
+  } else if (command.action == "RIGHT") {
+    Serial.print("R\n");
+  } else if (command.action == "SPINL") {
+    Serial.print("L\n");
+  } else if (command.action == "SPINR") {
+    Serial.print("R\n");
+  } else {
+    Serial.print("S\n");
+  }
 }
 
 void issueLocalStop() {
@@ -141,7 +176,9 @@ void ensureWifi() {
   }
 
   lastWifiAttemptMs = now;
-  WiFi.disconnect();
+  if (WiFi.status() == WL_CONNECT_FAILED || WiFi.status() == WL_NO_SSID_AVAIL) {
+    WiFi.disconnect();
+  }
   WiFi.begin(kSsid, kPassword);
 }
 
@@ -237,9 +274,14 @@ void pollMasterMessages() {
 }  // namespace
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  setStatusLed(false);
   Serial.begin(kUartBaud);
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.begin(kSsid, kPassword);
+  lastWifiAttemptMs = millis();
   issueLocalStop();
 }
 
@@ -247,4 +289,5 @@ void loop() {
   ensureWifi();
   ensureTcpConnection();
   pollMasterMessages();
+  updateStatusLed();
 }

@@ -1,6 +1,7 @@
 #include "board_config.h"
 
 typedef unsigned char u8;
+typedef unsigned int u16;
 
 static volatile u8 g_rx_seen = 0;
 static volatile u8 g_stop_seen = 0;
@@ -17,8 +18,8 @@ static void motors_stop(void) {
 static void motors_forward(void) {
   MOTOR_LEFT_IN1 = 1;
   MOTOR_LEFT_IN2 = 0;
-  MOTOR_RIGHT_IN1 = 0;
-  MOTOR_RIGHT_IN2 = 1;
+  MOTOR_RIGHT_IN1 = 1;
+  MOTOR_RIGHT_IN2 = 0;
   MOTOR_LEFT_EN = 1;
   MOTOR_RIGHT_EN = 1;
 }
